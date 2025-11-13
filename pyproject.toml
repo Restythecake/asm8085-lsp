@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools-scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "asm8085-lsp"
+version = "0.2.1"
+description = "Language Server Protocol implementation for Intel 8085 assembly language"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Resty", email = "your.email@example.com"}
+]
+keywords = ["8085", "assembly", "lsp", "language-server", "intel", "microprocessor", "ide"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Assemblers",
+    "Topic :: Software Development :: Compilers",
+    "Topic :: Text Editors :: Integrated Development Environments (IDE)",
+]
+
+[project.urls]
+Homepage = "https://github.com/YOUR_GITHUB_USERNAME/asm8085-lsp"
+"Bug Reports" = "https://github.com/YOUR_GITHUB_USERNAME/asm8085-lsp/issues"
+Source = "https://github.com/YOUR_GITHUB_USERNAME/asm8085-lsp"
+Documentation = "https://github.com/YOUR_GITHUB_USERNAME/asm8085-lsp#readme"
+
+[project.scripts]
+asm8085-lsp = "asm8085_lsp:main"
+
+[tool.setuptools]
+packages = ["asm8085_lsp", "asm8085_lsp.handlers", "asm8085_lsp.features", "asm8085_lsp.asm8085_cli", "asm8085_lsp.new_core"]
+
+[tool.setuptools.package-data]
+asm8085_lsp = ["*.json", "asm8085_cli/*.json"]

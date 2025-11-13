@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+"""CLI shim for asm8085 that uses the in-repo implementation."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+
+def _load_cli_module():
+    repo_root = Path(__file__).resolve().parents[1]
+    lsp_dir = repo_root / "lsp"
+    if str(lsp_dir) not in sys.path:
+        sys.path.insert(0, str(lsp_dir))
+    try:
+        from asm8085_cli import cli as cli_module  # type: ignore
+    except ModuleNotFoundError as exc:  # pragma: no cover - shim script
+        raise SystemExit(f"Failed to import asm8085 CLI: {exc}") from exc
+    return cli_module
+
+
+cli = _load_cli_module()
+expand_combined_flags = cli.expand_combined_flags
+main = cli.main
+run_program_once = cli.run_program_once
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,170 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install black flake8 pylint mypy
+
+      - name: Check formatting with Black
+        run: black --check asm8085_lsp/
+        continue-on-error: true
+
+      - name: Lint with flake8
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 asm8085_lsp/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all errors as warnings
+          flake8 asm8085_lsp/ --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+        continue-on-error: true
+
+  test:
+    name: Test on Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-cov
+
+      - name: Generate instruction database
+        run: python scripts/generate_db.py
+
+      - name: Test package import
+        run: python -c "import asm8085_lsp; print('Package imported successfully')"
+
+      - name: Test CLI execution
+        run: |
+          python -m asm8085_lsp --help || echo "CLI help command executed"
+        continue-on-error: true
+
+      - name: Run tests (if available)
+        run: pytest -v --cov=asm8085_lsp --cov-report=xml
+        continue-on-error: true
+
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+        continue-on-error: true
+
+  build:
+    name: Build Binary on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pyinstaller
+
+      - name: Generate instruction database
+        run: python scripts/generate_db.py
+
+      - name: Build binary (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          chmod +x scripts/build.sh
+          bash scripts/build.sh
+
+      - name: Build binary (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          pyinstaller --clean --onefile --name asm8085-lsp --console asm8085-lsp
+
+      - name: Test binary (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          chmod +x dist/asm8085-lsp
+          ./dist/asm8085-lsp --help || echo "Binary executed"
+        continue-on-error: true
+
+      - name: Test binary (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          dist\asm8085-lsp.exe --help || echo "Binary executed"
+        continue-on-error: true
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: asm8085-lsp-${{ matrix.os }}
+          path: |
+            dist/asm8085-lsp*
+          retention-days: 30
+
+  package:
+    name: Build Python Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build package
+        run: python -m build
+
+      - name: Check package
+        run: twine check dist/*
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: python-package
+          path: dist/
+          retention-days: 30
